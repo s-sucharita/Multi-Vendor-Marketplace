@@ -1,27 +1,48 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const productRoutes = require("./routes/productRoutes");
-const cors = require("cors");
 require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const path = require("path");
 
+const productRoutes = require("./routes/productRoutes");
+const cartRoutes = require("./routes/cartRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
+const vendorRoutes = require("./routes/vendorRoutes");
+
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-
+// Serve uploaded files as static assets
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.log(err));
+.then(() => {
+  console.log("MongoDB Connected");
 
-app.get("/", (req, res) => {
-  res.send("Marketplace API is running...");
+  app.use("/api/auth", authRoutes);
+  app.use("/api/user", userRoutes);
+  app.use("/api/products", productRoutes);
+  app.use("/api/cart", cartRoutes);
+  app.use("/api/orders", orderRoutes);
+  app.use("/api/reviews", reviewRoutes);
+  app.use("/api/admin", adminRoutes);
+  app.use("/api/vendor", vendorRoutes);
+
+
+  app.get("/", (req, res) => {
+    res.send("Marketplace API is running...");
+  });
+
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+})
+.catch(err => {
+  console.error("Mongo connection failed:", err);
 });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

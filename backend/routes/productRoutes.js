@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
 
 const {
   createProduct,
@@ -7,19 +9,51 @@ const {
   getProductById,
   updateProduct,
   deleteProduct,
+  getVendorProducts
 } = require("../controllers/productController");
 
-const { protect, vendorOnly } = require("../middleware/authMiddleware");
+const { protect, allowRoles, optionalAuth } = require("../middleware/authMiddleware");
 
-// TEMP: public create
-router.post("/", createProduct);
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
-// Public
-router.get("/", getProducts);
-router.get("/:id", getProductById);
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  }
+});
 
-// Vendor-only (later)
-router.put("/:id", protect, vendorOnly, updateProduct);
-router.delete("/:id", protect, vendorOnly, deleteProduct);
+// ================= PUBLIC/OPTIONAL AUTH =================
+router.get("/", optionalAuth, getProducts);
+
+// ================= VENDOR PRODUCTS (MUST BE ABOVE :id) =================
+router.get(
+  "/vendor/my-products",
+  protect,
+  allowRoles("vendor", "admin"),
+  getVendorProducts
+);
+
+// ================= PRODUCT DETAILS =================
+router.get("/:id", optionalAuth, getProductById);
+
+// ================= VENDOR / ADMIN =================
+router.post("/", protect, allowRoles("vendor", "admin"), upload.array("images"), createProduct);
+router.put("/:id", protect, allowRoles("vendor", "admin"), upload.array("images"), updateProduct);
+router.delete("/:id", protect, allowRoles("vendor", "admin"), deleteProduct);
 
 module.exports = router;
