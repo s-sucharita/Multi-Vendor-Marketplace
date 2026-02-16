@@ -6,6 +6,7 @@ exports.addToCart = async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     const userId = req.user.id;
+    console.log("CART USER:", userId);
 
     const product = await Product.findById(productId);
     if (!product) {

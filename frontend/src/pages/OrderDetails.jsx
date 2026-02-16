@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../api";
 import Navbar from "../components/Navbar";
@@ -10,11 +11,18 @@ export default function OrderDetails() {
   const navigate = useNavigate();
 
   useEffect(() => {
+  const fetchOrder = () => {
     API.get(`/orders/${id}`)
       .then(res => setOrder(res.data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
-  }, [id]);
+  };
+
+  fetchOrder();
+
+  const interval = setInterval(fetchOrder, 3000);
+  return () => clearInterval(interval);
+}, [id]);
 
   if (loading)
     return (
@@ -54,8 +62,17 @@ export default function OrderDetails() {
           <h3 className="font-semibold mb-2">Items</h3>
           <ul className="space-y-2">
             {order.items.map(item => (
-              <li key={item._id} className="flex justify-between">
-                <span>{item.product?.name || "Unknown"}</span>
+              <li key={item._id} className="flex justify-between items-center">
+                <div className="flex items-center">
+                  {item.product?.image && (
+                    <img
+                      src={item.product.image}
+                      alt={item.product.name}
+                      className="w-12 h-12 object-cover mr-2"
+                    />
+                  )}
+                  <span>{item.product?.name || "Unknown"}</span>
+                </div>
                 <span>{item.quantity} × ₹{item.price}</span>
               </li>
             ))}

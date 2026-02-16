@@ -35,4 +35,8 @@ router.post("/messages", sendMessage);
 router.get("/messages/:messageId", getMessageDetails);
 router.post("/messages/:messageId/reply", replyToMessage);
 
+// Orders
+router.post("/orders", require('../controllers/orderController').createOrder);
+router.post("/orders/buynow", require('../controllers/orderController').buyNow);
+
 module.exports = router;

@@ -360,10 +360,24 @@ exports.getLowStockProducts = async (req, res) => {
 // Send a new message (customer or vendor)
 exports.sendMessage = async (req, res) => {
   try {
-    const { recipient, product, order, subject, message, messageType } = req.body;
+    let { recipient, product, order, subject, message, messageType } = req.body;
     const sender = req.user.id;
+
+    // basic validation
     if (!recipient || !message) {
       return res.status(400).json({ message: "Recipient and message required" });
+    }
+
+    // if the caller specified a product but left subject blank, create a sensible default
+    if (!subject && product) {
+      // attempt to load the product name for context
+      const prod = await Product.findById(product).select("name");
+      if (prod) {
+        subject = `Question about ${prod.name}`;
+      } else {
+        // fallback generic subject
+        subject = "Product inquiry";
+      }
     }
 
     const newMsg = await VendorMessage.create({

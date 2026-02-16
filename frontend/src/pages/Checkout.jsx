@@ -3,8 +3,15 @@ import API from "../api";
 import Navbar from "../components/Navbar";
 import { useNavigate, Link } from "react-router-dom";
 
+
+
 export default function Checkout() {
   const [cartItems, setCartItems] = useState([]);
+  // track whether we've loaded the cart from server (so we don't wipe it later)
+  const [serverCartLoaded, setServerCartLoaded] = useState(false);
+
+
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -19,8 +26,32 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("cart")) || [];
-    setCartItems(saved);
+    const loadCart = async () => {
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (user && user.token) {
+        try {
+          const res = await API.get("/cart");
+          const items = res.data.items.map(i => ({
+            _id: i.product._id,
+            name: i.product.name,
+            image: (i.product.images && i.product.images.length > 0) ? i.product.images[0] : i.product.image,
+            price: i.price,
+            qty: i.quantity
+          }));
+          setCartItems(items);
+          setServerCartLoaded(true);
+          return;
+        } catch (err) {
+          console.error("Failed to fetch server cart", err);
+          // fall through to local storage fallback
+        }
+      }
+
+      const saved = JSON.parse(localStorage.getItem("cart")) || [];
+      setCartItems(saved);
+    };
+
+    loadCart();
   }, []);
 
   const handleChange = (e) => {
@@ -31,48 +62,27 @@ export default function Checkout() {
   const tax = Math.round(totalPrice * 0.1);
   const finalTotal = totalPrice + tax;
 
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
 
-  const placeOrder = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const placeOrder = async (e) => {
+  e.preventDefault();
 
-    if (cartItems.length === 0) {
-      alert("Your cart is empty");
-      setLoading(false);
-      return;
-    }
+  if (paymentMethod === "razorpay") {
+    alert("Payment Successful (Demo)");
+    localStorage.removeItem("cart");
+    navigate("/");
+    return;
+  }
 
-    try {
-      // if user logged in, sync cart to server
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user && user.token) {
-        // clear the existing server cart
-        await API.delete("/cart/clear");
-        for (const item of cartItems) {
-          await API.post("/cart/add", {
-            productId: item._id,
-            quantity: item.qty
-          });
-        }
-      }
+  // COD DEMO
+  alert("Order placed (COD Demo)");
+  localStorage.removeItem("cart");
+  navigate("/");
+};
 
-      // create order on server
-      const res = await API.post("/orders/create", {
-        deliveryAddress: formData,
-        paymentMethod
-      });
 
-      alert("Order placed successfully!");
-      localStorage.removeItem("cart");
-      navigate("/");
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to place order");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+
 
   if (cartItems.length === 0) {
     return (
@@ -116,14 +126,14 @@ export default function Checkout() {
                       Payment Method
                     </label>
                     <select
-                      value={paymentMethod}
-                      onChange={e => setPaymentMethod(e.target.value)}
-                      className="w-full border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-indigo-600"
-                    >
-                      <option value="COD">Cash on Delivery</option>
-                      <option value="Stripe">Stripe</option>
-                      <option value="Razorpay">Razorpay</option>
-                    </select>
+  value={paymentMethod}
+  onChange={(e) => setPaymentMethod(e.target.value)}
+  className="w-full border-2 border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:border-indigo-600"
+>
+  <option value="cod">Cash on Delivery</option>
+<option value="razorpay">Razorpay (Demo)</option>
+</select>
+
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">

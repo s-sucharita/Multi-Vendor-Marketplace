@@ -1,25 +1,24 @@
 const Order = require("../models/Order");
-const Cart = require("../models/Cart");
+
 const Payment = require("../models/Payment");
 const Notification = require("../models/Notification");
 const Product = require("../models/Product");
 
-// ===============================
+
 // CREATE ORDER FROM CART
-// ===============================
+
 exports.createOrder = async (req, res) => {
   try {
-    const { deliveryAddress, paymentMethod } = req.body;
+    const { deliveryAddress, paymentMethod, items, totalPrice } = req.body;
     const customerId = req.user.id;
 
-    const cart = await Cart.findOne({ user: customerId }).populate("items.product");
-    if (!cart || cart.items.length === 0) {
+    if (!items || items.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    //  1: Validate stock again (IMPORTANT)
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product._id);
+    // validate stock
+    for (const item of items) {
+      const product = await Product.findById(item.product);
       if (!product || product.stock < item.quantity) {
         return res.status(400).json({
           message: `Insufficient stock for ${product?.name}`
@@ -27,50 +26,110 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // 2: Reduce stock
-    for (const item of cart.items) {
-      await Product.findByIdAndUpdate(item.product._id, {
+    // reduce stock
+    for (const item of items) {
+      await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: -item.quantity }
       });
     }
 
-    // 3: Create order
     const order = await Order.create({
       customer: customerId,
-      items: cart.items,
-      totalPrice: cart.totalPrice,
+      items,
+      totalPrice,
       deliveryAddress,
       paymentMethod,
-      status: "Pending"
+      status: "Processing",
+paymentStatus: "Completed"
+
     });
 
-    // 4: Create payment record
     await Payment.create({
       order: order._id,
       customer: customerId,
-      amount: cart.totalPrice,
+      amount: totalPrice,
       method: paymentMethod,
-      status: "Pending"
+      status: "Completed"
     });
 
-    // 5: Notify vendors
-    const vendors = [...new Set(cart.items.map(item => item.vendor.toString()))];
+    const vendors = [...new Set(items.map(i => i.vendor).filter(Boolean))];
+
     for (const vendorId of vendors) {
       await Notification.create({
         recipient: vendorId,
         type: "Order",
         title: "New Order Received",
-        message: `You have received a new order: ${order._id}`,
+        message: `You received order ${order._id}`,
         relatedId: order._id,
         relatedModel: "Order"
       });
     }
 
-    //  6: Clear cart
-    await Cart.findOneAndUpdate(
-      { user: customerId },
-      { items: [], totalPrice: 0 }
-    );
+    res.status(201).json({ message: "Order created", order });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// CREATE ORDER DIRECTLY FROM A PRODUCT (BUY NOW)
+
+exports.buyNow = async (req, res) => {
+  try {
+    const { productId, quantity = 1, deliveryAddress, paymentMethod } = req.body;
+    const customerId = req.user.id;
+
+    // validate product & stock
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    if (product.stock < quantity) {
+      return res.status(400).json({ message: "Insufficient stock for this product" });
+    }
+
+    // reduce stock
+    await Product.findByIdAndUpdate(productId, { $inc: { stock: -quantity } });
+
+    const item = {
+      product: productId,
+      vendor: product.vendor,
+      quantity,
+      price: product.price
+    };
+
+const order = await Order.create({
+  customer: customerId,
+  items: [item],
+  totalPrice: product.price * quantity,
+  deliveryAddress,
+  paymentMethod,
+  status: "Processing",
+  paymentStatus: "Completed"
+});
+
+
+   await Payment.create({
+  order: order._id,
+  customer: customerId,
+  amount: order.totalPrice,
+  method: paymentMethod,
+  status: "Completed"
+});
+
+
+
+    // notify vendor
+    await Notification.create({
+      recipient: product.vendor,
+      type: "Order",
+      title: "New Order Received",
+      message: `You have received a new order: ${order._id}`,
+      relatedId: order._id,
+      relatedModel: "Order"
+    });
 
     res.status(201).json({ message: "Order created successfully", order });
   } catch (error) {
@@ -78,35 +137,55 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// ===============================
+
 // GET CUSTOMER ORDERS
-// ===============================
+
 exports.getCustomerOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ customer: req.user.id })
-      .populate("items.product")
-      .populate("items.vendor");
+    // when returning a customer's orders we want to include basic product
+    // information so the frontend can display a name + thumbnail. limit the
+    // fields to reduce payload size.
+    let orders = await Order.find({ customer: req.user.id })
+      .populate({ path: "items.product", select: "name image" })
+      .populate("items.vendor", "name email");
+
+    // for convenience add a couple of helper fields on each item so the
+    // frontend doesn't have to dig through an embedded object.
+    orders = orders.map(order => {
+      const o = order.toObject();
+      o.items = o.items.map(item => ({
+        ...item,
+        productName: item.product?.name || "",
+        productImage: item.product?.image || ""
+      }));
+      return o;
+    });
+
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// ===============================
-// GET VENDOR ORDERS (ONLY THEIR ITEMS)
-// ===============================
+
+// GET VENDOR ORDERS 
+
 exports.getVendorOrders = async (req, res) => {
   try {
     const vendorId = req.user.id;
 
-    const orders = await Order.find({ "items.vendor": vendorId })
-      .populate("items.product")
+    let orders = await Order.find({ "items.vendor": vendorId })
+      .populate({ path: "items.product", select: "name image" })
       .populate("customer", "name email");
 
     const filteredOrders = orders.map(order => {
-      const vendorItems = order.items.filter(
-        item => item.vendor.toString() === vendorId
-      );
+      const vendorItems = order.items
+        .filter(item => item.vendor.toString() === vendorId)
+        .map(item => ({
+          ...item.toObject(),
+          productName: item.product?.name || "",
+          productImage: item.product?.image || ""
+        }));
 
       return {
         ...order.toObject(),
@@ -120,13 +199,13 @@ exports.getVendorOrders = async (req, res) => {
   }
 };
 
-// ===============================
+
 // GET ORDER DETAILS
-// ===============================
+
 exports.getOrderDetails = async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId)
-      .populate("items.product")
+      .populate({ path: "items.product", select: "name image" })
       .populate("items.vendor")
       .populate("customer");
 
@@ -135,12 +214,12 @@ exports.getOrderDetails = async (req, res) => {
     }
 
     const isVendor = order.items.some(
-      item => item.vendor.toString() === req.user.id
+       item => item.vendor?._id?.toString() === req.user.id
     );
 
     if (
-      order.customer._id.toString() !== req.user.id &&
-      req.user.role !== "admin" &&
+      order.customer?.toString() !== req.user.id &&
+order.customer?._id?.toString() !== req.user.id &&
       !isVendor
     ) {
       return res.status(403).json({ message: "Access denied" });
@@ -152,9 +231,8 @@ exports.getOrderDetails = async (req, res) => {
   }
 };
 
-// ===============================
 // UPDATE ORDER STATUS
-// ===============================
+
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -165,7 +243,7 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const isVendor = order.items.some(
-      item => item.vendor.toString() === req.user.id
+      item => item.vendor?._id?.toString() === req.user.id
     );
 
     if (!isVendor && req.user.role !== "admin") {
@@ -190,9 +268,9 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// ===============================
+
 // CANCEL ORDER
-// ===============================
+
 exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId);
@@ -226,5 +304,20 @@ exports.cancelOrder = async (req, res) => {
     res.json({ message: "Order cancelled", order });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+  _id: req.params.id,
+  customer: req.user.id
+    });
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
   }
 };

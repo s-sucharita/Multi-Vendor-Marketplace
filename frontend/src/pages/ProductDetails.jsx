@@ -7,7 +7,7 @@ export default function ProductDetails() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
-  const [contactSubject, setContactSubject] = useState("");
+  // message to seller, subject removed per issue report
   const [contactMessage, setContactMessage] = useState("");
   const navigate = useNavigate();
 
@@ -36,12 +36,10 @@ export default function ProductDetails() {
       await API.post("/user/messages", {
         recipient: product.vendor._id,
         product: product._id,
-        subject: contactSubject,
         message: contactMessage,
         messageType: "product-query"
       });
       alert("Message sent to seller");
-      setContactSubject("");
       setContactMessage("");
     } catch (err) {
       console.error(err);
@@ -238,12 +236,6 @@ export default function ProductDetails() {
               {product.vendor && (
                 <div className="mt-6 p-4 bg-gray-100 rounded">
                   <h3 className="font-semibold mb-2">Message Seller</h3>
-                  <textarea
-                    placeholder="Subject"
-                    value={product.subject || ""}
-                    onChange={e => setContactSubject(e.target.value)}
-                    className="w-full p-2 border mb-2 rounded"
-                  />
                   <textarea
                     placeholder="Your question or comment"
                     value={contactMessage}

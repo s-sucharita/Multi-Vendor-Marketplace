@@ -14,6 +14,7 @@ const authRoutes = require("./routes/authRoutes");
 const vendorRoutes = require("./routes/vendorRoutes");
 
 
+
 const app = express();
 
 app.use(cors());
@@ -34,6 +35,8 @@ mongoose.connect(process.env.MONGO_URI)
   app.use("/api/reviews", reviewRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/vendor", vendorRoutes);
+  
+
 
 
   app.get("/", (req, res) => {

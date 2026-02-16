@@ -17,6 +17,8 @@ import Reports from "./pages/Reports";
 import LeaveManagement from "./pages/LeaveManagement";
 import AdminLeaves from "./pages/AdminLeaves";
 import { CartProvider } from "./context/CartContext";
+import Orders from "./pages/Orders";
+import OrderDetails from "./pages/OrderDetails";
 
 export default function App() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="/vendor/add-product" element={<AddProduct />} />
           <Route path="/vendor/edit-product/:id" element={<EditProduct />} />
+           <Route path="/orders" element={<Orders />} />
+        <Route path="/order/:id" element={<OrderDetails />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>

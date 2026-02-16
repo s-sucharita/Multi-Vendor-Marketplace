@@ -30,10 +30,25 @@ export default function OrderHistory() {
                 key={order._id}
                 className="bg-white p-4 rounded-lg shadow flex justify-between items-center"
               >
-                <div>
-                  <p className="font-semibold">Order #{order._id}</p>
-                  <p>Status: {order.status}</p>
-                  <p>Total: ₹{order.totalPrice.toLocaleString()}</p>
+                <div className="flex items-center">
+                  {order.items && order.items[0]?.productImage && (
+                    <img
+                      src={order.items[0].productImage}
+                      alt={order.items[0].productName}
+                      className="w-16 h-16 object-cover mr-4"
+                    />
+                  )}
+                  <div>
+                    <p className="font-semibold">Order #{order._id}</p>
+                    <p className="text-sm">
+                      {order.items
+                        .map(i => i.productName)
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                    <p>Status: {order.status}</p>
+                    <p>Total: ₹{order.totalPrice.toLocaleString()}</p>
+                  </div>
                 </div>
                 <Link
                   to={`/order/${order._id}`}
