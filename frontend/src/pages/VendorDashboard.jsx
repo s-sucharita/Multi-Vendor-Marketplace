@@ -322,6 +322,22 @@ export default function VendorDashboard() {
                           <option value="Delivered">Delivered</option>
                         </select>
                       </div>
+                      {/* product list */}
+                      {order.items && order.items.length > 0 && (
+                        <div style={{ marginTop: "10px" }}>
+                          <h5 style={{ fontWeight: "bold" }}>Items</h5>
+                          <ul>
+                            {order.items.map(item => (
+                              <li key={item._id} style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                                {item.productImage && (
+                                  <img src={item.productImage} alt={item.productName} className="w-12 h-12 object-cover rounded mr-2" />
+                                )}
+                                <span>{item.productName} x {item.quantity} (@ ₹{item.price})</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}

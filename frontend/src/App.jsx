@@ -18,7 +18,9 @@ import LeaveManagement from "./pages/LeaveManagement";
 import AdminLeaves from "./pages/AdminLeaves";
 import { CartProvider } from "./context/CartContext";
 import Orders from "./pages/Orders";
-import OrderDetails from "./pages/OrderDetails";
+import VendorOrders from "./pages/VendorOrders";
+import AdminDashboard from "./pages/AdminDashboard";
+
 
 export default function App() {
   return (
@@ -44,6 +46,9 @@ export default function App() {
           <Route path="/vendor/edit-product/:id" element={<EditProduct />} />
            <Route path="/orders" element={<Orders />} />
         <Route path="/order/:id" element={<OrderDetails />} />
+        <Route path="/vendor/orders" element={<VendorOrders />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
+
         </Routes>
       </BrowserRouter>
     </CartProvider>

@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const {
   // Vendor Management
@@ -31,6 +32,7 @@ const {
   // Reports
   generateVendorReport,
   getMarketplaceReport,
+  getRealtimeProductivity,
   
   // Notifications
   sendNotification,
@@ -69,6 +71,8 @@ router.put("/compliance/:vendorId/score", updateComplianceScore);
 // ==================== REPORTS ====================
 router.get("/reports/vendor/:vendorId", generateVendorReport);
 router.get("/reports/marketplace", getMarketplaceReport);
+router.get("/reports/realtime", getRealtimeProductivity);
+
 // custom aggregated report (orders by vendor, revenue) with optional date range
 router.get("/reports/custom", require('../controllers/vendorController').getAdminReport);
 

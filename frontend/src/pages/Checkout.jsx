@@ -36,7 +36,8 @@ export default function Checkout() {
             name: i.product.name,
             image: (i.product.images && i.product.images.length > 0) ? i.product.images[0] : i.product.image,
             price: i.price,
-            qty: i.quantity
+            qty: i.quantity,
+            vendor: i.vendor // include vendor for order creation
           }));
           setCartItems(items);
           setServerCartLoaded(true);
@@ -66,18 +67,65 @@ export default function Checkout() {
 
 const placeOrder = async (e) => {
   e.preventDefault();
+  
+  try {
+    setLoading(true);
 
-  if (paymentMethod === "razorpay") {
-    alert("Payment Successful (Demo)");
+    // Build delivery address object
+    const deliveryAddress = {
+      street: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zipCode: formData.zipCode,
+      country: "India"
+    };
+
+    // Prepare items with product ID, vendor, quantity and price
+    const items = cartItems.map(item => {
+      // Extract vendor ID - handle both cases:
+      // Case 1: vendor is populated User object with _id
+      // Case 2: vendor is just an ID string
+      // Case 3: vendor doesn't exist (backend will fetch from product)
+      const vendorId = item.vendor?._id || item.vendor;
+      
+      const itemData = {
+        product: item._id,
+        quantity: item.qty,
+        price: item.price
+      };
+      
+      // Only include vendor if it exists
+      if (vendorId) {
+        itemData.vendor = vendorId;
+      }
+      
+      return itemData;
+    });
+
+    // Create order via API
+    const res = await API.post("/orders/create", {
+      deliveryAddress,
+      paymentMethod,
+      items,
+      totalPrice: finalTotal
+    });
+
+    alert("Order placed successfully!");
+    
+    // Clear cart from server and localStorage
+    try {
+      await API.delete("/cart");
+    } catch (err) {
+      // continue even if cart clear fails
+    }
     localStorage.removeItem("cart");
-    navigate("/");
-    return;
+    
+    navigate("/orders");
+  } catch (error) {
+    alert("Error placing order: " + (error.response?.data?.message || error.message));
+  } finally {
+    setLoading(false);
   }
-
-  // COD DEMO
-  alert("Order placed (COD Demo)");
-  localStorage.removeItem("cart");
-  navigate("/");
 };
 
 

@@ -518,6 +518,26 @@ exports.getMarketplaceReport = async (req, res) => {
   }
 };
 
+exports.getRealtimeProductivity = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const ordersToday = await Order.countDocuments({ createdAt: { $gte: today }});
+    const productsToday = await Product.countDocuments({ createdAt: { $gte: today }});
+    const activitiesToday = await ActivityLog.countDocuments({ createdAt: { $gte: today }});
+
+    res.json({
+      ordersToday,
+      productsToday,
+      activitiesToday
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+
 // ==================== LEAVE MANAGEMENT ====================
 exports.viewLeaveRequests = async (req,res)=>{
   try{

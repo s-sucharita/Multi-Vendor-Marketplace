@@ -135,10 +135,23 @@ exports.getVendorOrders = async (req, res) => {
 
     if (status) filter.status = status;
 
-    const orders = await Order.find(filter)
+    let orders = await Order.find(filter)
       .populate("customer", "name email phone")
-      .populate("items.product", "name price")
+      .populate("items.product", "name price image")
       .sort({ createdAt: -1 });
+
+    // attach product fields and filter out items with null products
+    orders = orders.map(order => {
+      const o = order.toObject();
+      o.items = o.items
+        .filter(item => item.product) // filter out null products
+        .map(item => ({
+          ...item,
+          productName: item.product?.name || "Deleted Product",
+          productImage: item.product?.image || ""
+        }));
+      return o;
+    }).filter(order => order.items.length > 0); // filter out orders with no valid items
 
     res.json(orders);
   } catch (error) {
@@ -151,7 +164,7 @@ exports.getOrderDetails = async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId)
       .populate("customer", "name email phone address")
-      .populate("items.product", "name price description");
+      .populate("items.product", "name price description image");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });

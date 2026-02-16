@@ -46,6 +46,12 @@ export default function Navbar() {
             Sports
           </Link>
           <Link
+  to="/vendor/orders"
+  className="hover:text-indigo-200 transition text-lg font-medium"
+>
+  📦 Orders
+</Link>
+          <Link
             to="/cart"
             className="hover:text-indigo-200 transition text-lg font-medium"
           >

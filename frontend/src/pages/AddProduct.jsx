@@ -71,7 +71,7 @@ export default function AddProduct() {
         data.append(`images`, file);
       });
 
-      const res = await API.post("/products", data, {
+      const res = await API.post("/vendor/products", data, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       alert("Product added successfully!");

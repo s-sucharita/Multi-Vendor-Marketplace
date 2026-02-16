@@ -56,9 +56,9 @@ router.put("/products/:productId", updateProduct);
 router.delete("/products/:productId", deleteProduct);
 
 // ==================== ORDER MANAGEMENT ====================
-router.get("/orders", getVendorOrders);
+router.get("/orders", protect, getVendorOrders);
 router.get("/orders/:orderId", getOrderDetails);
-router.put("/orders/:orderId/status", updateOrderStatus);
+router.put("/orders/:orderId/status", protect, updateOrderStatus);
 router.post("/orders/:orderId/pack", packOrder);
 router.post("/orders/:orderId/ship", shipOrder);
 
