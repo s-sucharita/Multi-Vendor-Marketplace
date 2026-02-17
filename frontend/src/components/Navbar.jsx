@@ -73,6 +73,11 @@ export default function Navbar() {
               <Link to="/reports" className="hover:text-indigo-200 transition text-lg font-medium">
                 📊 Reports
               </Link>
+              {user.role === "admin" && (
+                <Link to="/admin/dashboard" className="hover:text-indigo-200 transition text-lg font-medium">
+                  🏠 Dashboard
+                </Link>
+              )}
               {user.role === "vendor" && (
                 <Link to="/vendor/add-product" className="hover:text-indigo-200 transition text-lg font-medium">
                   ➕ Add Item
@@ -138,7 +143,17 @@ export default function Navbar() {
                       </Link>
                     </>
                   )}
-                  <button
+                  {user.role === "admin" && (
+                    <>
+                      <Link
+                        to="/admin/dashboard"
+                        className="block px-4 py-2 hover:bg-indigo-100 rounded-t-lg border-b"
+                        onClick={() => setShowMenu(false)}
+                      >
+                        🏠 Admin Dashboard
+                      </Link>
+                    </>
+                  )}                  <button
                     onClick={() => {
                       handleLogout();
                       setShowMenu(false);

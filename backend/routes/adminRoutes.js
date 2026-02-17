@@ -17,6 +17,7 @@ const {
   getActivityLogs,
   logActivity,
   getDailySummary,
+  getDailyOverview,
   
   // Performance Goals
   createPerformanceGoal,
@@ -55,8 +56,8 @@ router.put("/tasks/:taskId/status", updateTaskStatus);
 // ==================== ACTIVITY LOGS ====================
 router.get("/activity-logs", getActivityLogs);
 router.post("/activity-logs", logActivity);
+router.get("/activity-logs/daily", getDailyOverview); // global marketplace overview
 router.get("/activity-logs/daily/:vendorId", getDailySummary);
-
 // ==================== PERFORMANCE GOALS ====================
 router.post("/goals", createPerformanceGoal);
 router.get("/goals/:vendorId", getPerformanceGoals);

@@ -1,4 +1,6 @@
 const Product = require("../models/Product");
+const ActivityLog = require("../models/ActivityLog");
+
 
 // CREATE - vendor only
 const createProduct = async (req, res) => {
@@ -16,6 +18,20 @@ const createProduct = async (req, res) => {
       vendor: req.user.id
     });
     const saved = await product.save();
+
+    // log the activity for the vendor
+    try {
+      await ActivityLog.create({
+        userId: req.user.id,
+        action: "product-listed",
+        description: `Listed new product ${saved.name}`,
+        productsListedToday: 1,
+        metadata: { productId: saved._id }
+      });
+    } catch (logErr) {
+      console.warn("Failed to log product listing activity:", logErr.message);
+    }
+
     res.status(201).json(saved);
   } catch (err) {
     console.error(err);

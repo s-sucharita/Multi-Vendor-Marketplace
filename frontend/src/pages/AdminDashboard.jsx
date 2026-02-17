@@ -7,6 +7,7 @@ export default function AdminDashboard() {
   const [summary,setSummary]=useState(null);
   const [realtime,setRealtime]=useState(null);
   const [vendors,setVendors]=useState([]);
+  const [dailyActivity, setDailyActivity] = useState(null);
 
   useEffect(()=>{
     load();
@@ -16,10 +17,12 @@ export default function AdminDashboard() {
     const s = await API.get("/admin/reports/marketplace");
     const r = await API.get("/admin/reports/realtime");
     const v = await API.get("/admin/vendors");
+    const a = await API.get("/admin/activity-logs/daily");
 
     setSummary(s.data.summary);
     setRealtime(r.data);
     setVendors(v.data);
+    setDailyActivity(a.data);
   };
 
   return (
@@ -34,6 +37,41 @@ export default function AdminDashboard() {
         <Card title="Active Vendors" value={summary?.activeVendors}/>
 
       </div>
+
+      {/* daily activity log table */}
+      {dailyActivity && (
+        <div className="p-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Today's Activity Logs</h2>
+            <button
+              onClick={load}
+              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+            >
+              Refresh
+            </button>
+          </div>
+          <table className="w-full bg-white shadow rounded">
+            <thead>
+              <tr className="border-b">
+                <th>Time</th>
+                <th>Vendor</th>
+                <th>Action</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyActivity.activities.map((act) => (
+                <tr key={act._id} className="border-b text-center">
+                  <td>{new Date(act.createdAt).toLocaleTimeString()}</td>
+                  <td>{act.userId?.name || "-"}</td>
+                  <td>{act.action}</td>
+                  <td>{act.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="p-8">
 

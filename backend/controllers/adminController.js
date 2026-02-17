@@ -223,6 +223,37 @@ exports.getDailySummary = async (req, res) => {
   }
 };
 
+// Get global daily overview (orders/products/activities across marketplace)
+exports.getDailyOverview = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const ordersProcessed = await Order.countDocuments({
+      createdAt: { $gte: today, $lt: tomorrow }
+    });
+    const productsListed = await Product.countDocuments({
+      createdAt: { $gte: today, $lt: tomorrow }
+    });
+    const activityLogs = await ActivityLog.find({
+      createdAt: { $gte: today, $lt: tomorrow }
+    }).populate("userId", "name businessName email");
+
+    res.json({
+      date: today,
+      ordersProcessed,
+      productsListed,
+      activityCount: activityLogs.length,
+      activities: activityLogs
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ==================== PERFORMANCE GOALS ====================
 
 // Create performance goal

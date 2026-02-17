@@ -2,6 +2,8 @@ const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const Notification = require("../models/Notification");
 const Product = require("../models/Product");
+const ActivityLog = require("../models/ActivityLog");
+
 
 // ===============================
 // CREATE ORDER FROM CART
@@ -65,6 +67,22 @@ exports.createOrder = async (req, res) => {
       method: paymentMethod,
       status: "Completed"
     });
+
+    // log activity for each vendor involved
+    try {
+      const vendors = [...new Set(preparedItems.map(i => i.vendor).filter(Boolean))];
+      for (const vid of vendors) {
+        await ActivityLog.create({
+          userId: vid,
+          action: "order-processed",
+          description: `Order ${order._id} created`,
+          ordersProcessedToday: 1,
+          metadata: { orderId: order._id }
+        });
+      }
+    } catch (logErr) {
+      console.warn("Failed to log order activity:", logErr.message);
+    }
 
     const vendors = [...new Set(preparedItems.map(i => i.vendor).filter(Boolean))];
 
@@ -134,6 +152,21 @@ exports.buyNow = async (req, res) => {
       method: paymentMethod,
       status: "Completed",
     });
+
+    // log activity for the vendor
+    try {
+      if (product.vendor) {
+        await ActivityLog.create({
+          userId: product.vendor,
+          action: "order-processed",
+          description: `Order ${order._id} created via buy now`,
+          ordersProcessedToday: 1,
+          metadata: { orderId: order._id }
+        });
+      }
+    } catch (logErr) {
+      console.warn("Failed to log buy-now order activity:", logErr.message);
+    }
 
     await Notification.create({
       recipient: product.vendor,
