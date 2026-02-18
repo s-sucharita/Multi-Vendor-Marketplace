@@ -14,7 +14,9 @@ export default function Home() {
   useEffect(() => {
     API.get("/products")
       .then(res => setProducts(res.data))
-      .catch(err => alert("Failed to load products"))
+      .catch(err => {alert("Failed to load products")
+        console.log(err.response);
+      })
       .finally(() => setLoading(false));
   }, []);
 
