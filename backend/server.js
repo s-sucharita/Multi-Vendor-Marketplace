@@ -17,8 +17,13 @@ const vendorRoutes = require("./routes/vendorRoutes");
 
 const app = express();
 
-app.use(cors());
+app.use(cors(
+  {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  }
+));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files as static assets
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
