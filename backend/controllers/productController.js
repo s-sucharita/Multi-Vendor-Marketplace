@@ -39,64 +39,67 @@ const createProduct = async (req, res) => {
 };
 
 // READ ALL with filters and search
+
 const getProducts = async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice, sortBy, vendor } = req.query;
+    const {
+      search,
+      vendor,
+      category,
+      minPrice,
+      maxPrice,
+      sort
+    } = req.query;
+
     let filter = {};
 
-    // if the requester is a vendor ensure they only see their own products
-    if (req.user && req.user.role === "vendor") {
-      filter.vendor = req.user.id;
-    }
-
-    // Search by name or description
+    // 🔎 Search
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
-      ];
+      filter.name = { $regex: search, $options: "i" };
     }
 
-    // Filter by category
+    // 🏷 Vendor
+    if (vendor) {
+      filter.vendor = vendor;
+    }
+
+    // 📂 Category
     if (category) {
       filter.category = category;
     }
 
-    // Filter by vendor query param (only applies for non-vendor or admin)
-    if (vendor && !(req.user && req.user.role === "vendor")) {
-      filter.vendor = vendor;
-    }
-
-    // Filter by price range
+    // 💰 Price range
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
 
-    // Build sort
-    let sortObj = {};
-    if (sortBy === "newest") {
-      sortObj = { createdAt: -1 };
-    } else if (sortBy === "price-low" || sortBy === "priceAsc") {
-      sortObj = { price: 1 };
-    } else if (sortBy === "price-high" || sortBy === "priceDesc") {
-      sortObj = { price: -1 };
-    } else if (sortBy === "nameAsc") {
-      sortObj = { name: 1 };
-    } else if (sortBy === "nameDesc") {
-      sortObj = { name: -1 };
-    } else {
-      sortObj = { createdAt: -1 };
+    // 🔥 SORTING LOGIC
+    let sortOption = {};
+
+    if (sort === "priceAsc") {
+      sortOption.price = 1;
     }
 
-    const products = await Product.find(filter)
-      .populate("vendor", "name email")
-      .sort(sortObj);
+    if (sort === "priceDesc") {
+      sortOption.price = -1;
+    }
+
+    if (sort === "nameAsc") {
+      sortOption.name = 1;
+    }
+
+    if (sort === "nameDesc") {
+      sortOption.name = -1;
+    }
+
+    const products = await Product.find(filter).sort(sortOption);
 
     res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
