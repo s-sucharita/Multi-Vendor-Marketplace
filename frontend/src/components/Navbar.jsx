@@ -68,7 +68,7 @@ export default function Navbar() {
             </>
           )}
 
-          {(user && (user.role === "vendor" || user.role === "admin")) && (
+          {(user && (user.role === "vendor")) && (
             <>
               <Link to="/reports" className="hover:text-indigo-200 transition text-lg font-medium">
                 📊 Reports
