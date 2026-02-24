@@ -141,7 +141,7 @@ export default function ProductDetails() {
               {product.images && product.images.length > 0 ? (
                 <div className="w-full max-h-96 relative">
                   <img
-                    src={product.images[0]}
+                    src={`http://localhost:5000${product.images[0]}`}
                     alt={product.name}
                     className="w-full max-h-96 object-cover rounded-lg shadow-md"
                   />

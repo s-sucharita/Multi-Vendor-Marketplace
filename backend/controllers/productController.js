@@ -15,7 +15,7 @@ const createProduct = async (req, res) => {
     } = req.body;
 
     // Get uploaded image paths
-    const images = req.files?.map(file => `/uploads/${file.filename}`) || [];
+   const images = req.files?.map(file => `/uploads/products/${file.filename}`);
 
     const product = new Product({
       name,

@@ -5,6 +5,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 
+
+
 const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -20,14 +22,15 @@ const app = express();
 
 app.use(cors(
   {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
   }
 ));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files as static assets
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 mongoose.connect(process.env.MONGO_URI)
 .then(() => {
@@ -41,7 +44,7 @@ mongoose.connect(process.env.MONGO_URI)
   app.use("/api/reviews", reviewRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/vendor", vendorRoutes);
-  app.use("/uploads", express.static("uploads"));
+  
   
 
 
