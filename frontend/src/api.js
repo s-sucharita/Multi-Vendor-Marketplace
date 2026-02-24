@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://multi-vendor-marketplace-production.up.railway.app/api",
+  baseURL: "http://localhost:5000/api",
 });
 
 // Attach token automatically

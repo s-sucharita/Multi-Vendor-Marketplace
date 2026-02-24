@@ -1,97 +1,105 @@
-const express = require("express");
-const router = express.Router();
-const { protect, vendorOnly } = require("../middleware/authMiddleware");
-const {
-  // Product Management
-  getVendorProducts,
-  getProductDetails,
-  createProduct,
-  updateProduct,
-  deleteProduct,
+  const express = require("express");
+  const router = express.Router();
+  const upload = require("../middleware/upload");
 
-  // Order Management
-  getVendorOrders,
-  getOrderDetails,
-  updateOrderStatus,
-  packOrder,
-  shipOrder,
+  const { protect, vendorOnly } = require("../middleware/authMiddleware");
+  const {
+    // Product Management
+    getVendorProducts,
+    getProductDetails,
+    updateProduct,
+    deleteProduct,
 
-  // Inventory Management
-  getInventory,
-  getProductInventory,
-  updateStock,
-  getLowStockProducts,
+    // Order Management
+    getVendorOrders,
+    getOrderDetails,
+    updateOrderStatus,
+    packOrder,
+    shipOrder,
 
-  // Messaging
-  getMessages,
-  getMessageDetails,
-  replyToMessage,
+    // Inventory Management
+    getInventory,
+    getProductInventory,
+    updateStock,
+    getLowStockProducts,
 
-  // Returns Management
-  getReturnRequests,
-  getReturnDetails,
-  approveReturn,
-  rejectReturn,
-  markReturnReceived,
+    // Messaging
+    getMessages,
+    getMessageDetails,
+    replyToMessage,
 
-  // Dispute Management
-  getDisputes,
-  getDisputeDetails,
-  respondToDispute,
+    // Returns Management
+    getReturnRequests,
+    getReturnDetails,
+    approveReturn,
+    rejectReturn,
+    markReturnReceived,
 
-  // Reports & Analytics
-  getSalesSummary,
-  getSalesReport,
-  getNotificationsSummary
-} = require("../controllers/vendorController");
+    // Dispute Management
+    getDisputes,
+    getDisputeDetails,
+    respondToDispute,
 
-// All vendor routes require authentication and vendor role
-router.use(protect, vendorOnly);
+    // Reports & Analytics
+    getSalesSummary,
+    getSalesReport,
+    getNotificationsSummary
+  } = require("../controllers/vendorController");
 
-// ==================== PRODUCT MANAGEMENT ====================
-router.get("/products", getVendorProducts);
-router.post("/products", createProduct);
-router.get("/products/:productId", getProductDetails);
-router.put("/products/:productId", updateProduct);
-router.delete("/products/:productId", deleteProduct);
+    const { createProduct: createVendorProduct  } = require("../controllers/productController");
 
-// ==================== ORDER MANAGEMENT ====================
-router.get("/orders", protect, getVendorOrders);
-router.get("/orders/:orderId", getOrderDetails);
-router.put("/orders/:orderId/status", protect, updateOrderStatus);
-router.post("/orders/:orderId/pack", packOrder);
-router.post("/orders/:orderId/ship", shipOrder);
 
-// ==================== INVENTORY MANAGEMENT ====================
-router.get("/inventory", getInventory);
-router.get("/inventory/:productId", getProductInventory);
-router.put("/inventory/:productId", updateStock);
-router.get("/inventory/low-stock", getLowStockProducts);
+  // All vendor routes require authentication and vendor role
+  router.use(protect, vendorOnly);
 
-// ==================== MESSAGING & COMMUNICATION ====================
-router.get("/messages", getMessages);
-router.get("/messages/:messageId", getMessageDetails);
-router.post("/messages/:messageId/reply", replyToMessage);
+  // ==================== PRODUCT MANAGEMENT ====================
+  router.get("/products", getVendorProducts);
+  router.post(
+    "/products",
+    upload.array("images"), // <-- multer will handle image upload
+    createVendorProduct
+  );
+  router.get("/products/:productId", getProductDetails);
+  router.put("/products/:productId", updateProduct);
+  router.delete("/products/:productId", deleteProduct);
 
-// ==================== RETURNS MANAGEMENT ====================
-router.get("/returns", getReturnRequests);
-router.get("/returns/:returnId", getReturnDetails);
-router.post("/returns/:returnId/approve", approveReturn);
-router.post("/returns/:returnId/reject", rejectReturn);
-router.post("/returns/:returnId/received", markReturnReceived);
+  // ==================== ORDER MANAGEMENT ====================
+  router.get("/orders", protect, getVendorOrders);
+  router.get("/orders/:orderId", getOrderDetails);
+  router.put("/orders/:orderId/status", protect, updateOrderStatus);
+  router.post("/orders/:orderId/pack", packOrder);
+  router.post("/orders/:orderId/ship", shipOrder);
 
-// ==================== DISPUTE MANAGEMENT ====================
-router.get("/disputes", getDisputes);
-router.get("/disputes/:disputeId", getDisputeDetails);
-router.post("/disputes/:disputeId/respond", respondToDispute);
+  // ==================== INVENTORY MANAGEMENT ====================
+  router.get("/inventory", getInventory);
+  router.get("/inventory/:productId", getProductInventory);
+  router.put("/inventory/:productId", updateStock);
+  router.get("/inventory/low-stock", getLowStockProducts);
 
-// ==================== REPORTS & ANALYTICS ====================
-router.get("/reports/summary", getSalesSummary);
-router.get("/reports/detailed", getSalesReport);
-router.get("/dashboard/notifications", getNotificationsSummary);
+  // ==================== MESSAGING & COMMUNICATION ====================
+  router.get("/messages", getMessages);
+  router.get("/messages/:messageId", getMessageDetails);
+  router.post("/messages/:messageId/reply", replyToMessage);
 
-// ==================== LEAVE MANAGEMENT ====================
-router.post("/leaves", require('../controllers/vendorController').requestLeave);
-router.get("/leaves", require('../controllers/vendorController').getMyLeaves);
+  // ==================== RETURNS MANAGEMENT ====================
+  router.get("/returns", getReturnRequests);
+  router.get("/returns/:returnId", getReturnDetails);
+  router.post("/returns/:returnId/approve", approveReturn);
+  router.post("/returns/:returnId/reject", rejectReturn);
+  router.post("/returns/:returnId/received", markReturnReceived);
 
-module.exports = router;
+  // ==================== DISPUTE MANAGEMENT ====================
+  router.get("/disputes", getDisputes);
+  router.get("/disputes/:disputeId", getDisputeDetails);
+  router.post("/disputes/:disputeId/respond", respondToDispute);
+
+  // ==================== REPORTS & ANALYTICS ====================
+  router.get("/reports/summary", getSalesSummary);
+  router.get("/reports/detailed", getSalesReport);
+  router.get("/dashboard/notifications", getNotificationsSummary);
+
+  // ==================== LEAVE MANAGEMENT ====================
+  router.post("/leaves", require('../controllers/vendorController').requestLeave);
+  router.get("/leaves", require('../controllers/vendorController').getMyLeaves);
+
+  module.exports = router;

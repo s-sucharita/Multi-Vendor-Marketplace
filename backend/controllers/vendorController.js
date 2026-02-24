@@ -45,7 +45,11 @@ exports.getProductDetails = async (req, res) => {
 
 // Create new product
 exports.createProduct = async (req, res) => {
-  try {
+
+  console.log("BODY:", req.body);
+console.log("FILES:", req.files);
+  //try {
+  console.log("Creating product with data:", req.body);
     const { name, description, price, image, category, stock } = req.body;
 
     const product = await Product.create({
@@ -74,9 +78,9 @@ exports.createProduct = async (req, res) => {
     });
 
     res.status(201).json({ message: "Product created successfully", product });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+  // } catch (error) {
+  //   res.status(500).json({ message: error.message });
+  // }
 };
 
 // Update product

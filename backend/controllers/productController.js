@@ -5,37 +5,36 @@ const ActivityLog = require("../models/ActivityLog");
 // CREATE - vendor only
 const createProduct = async (req, res) => {
   try {
-    // Convert uploaded files to image URLs/paths
-    let body = { ...req.body };
-    if (req.files && req.files.length > 0) {
-      body.images = req.files.map(f => `/uploads/${f.filename}`);
-      // Set first image as primary image
-      body.image = body.images[0];
-    }
+    const {
+      name,
+      description,
+      price,
+      stock,
+      category,
+      extraDetails
+    } = req.body;
+
+    // Get uploaded image paths
+    const images = req.files?.map(file => `/uploads/${file.filename}`) || [];
 
     const product = new Product({
-      ...body,
-      vendor: req.user.id
+      name,
+      description,
+      price,
+      stock,
+      category,
+      extraDetails,
+      images,
+      vendor: req.user._id   
     });
-    const saved = await product.save();
 
-    // log the activity for the vendor
-    try {
-      await ActivityLog.create({
-        userId: req.user.id,
-        action: "product-listed",
-        description: `Listed new product ${saved.name}`,
-        productsListedToday: 1,
-        metadata: { productId: saved._id }
-      });
-    } catch (logErr) {
-      console.warn("Failed to log product listing activity:", logErr.message);
-    }
+    const savedProduct = await product.save();
 
-    res.status(201).json(saved);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(201).json(savedProduct);
+
+  } catch (error) {
+    console.error("Create Product Error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -144,7 +143,7 @@ const updateProduct = async (req, res) => {
     
     // Handle image uploads
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(f => `/uploads/${f.filename}`);
+      const newImages = req.files.map(f => `/uploads/products/${f.filename}`);
       
       // If replaceImages flag is set, replace all; otherwise append
       if (req.body.replaceImages === "true") {

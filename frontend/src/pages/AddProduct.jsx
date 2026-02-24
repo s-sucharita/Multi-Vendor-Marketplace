@@ -13,6 +13,7 @@ export default function AddProduct() {
     category: "",
   });
   const [imageFiles, setImageFiles] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
@@ -46,6 +47,7 @@ export default function AddProduct() {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     setImageFiles(prev => [...prev, ...files]);
+   
   };
 
   const removeImage = (idx) => {
@@ -54,34 +56,41 @@ export default function AddProduct() {
     setImageFiles(imgs);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const data = new FormData();
-      data.append("name", formData.name);
-      data.append("description", formData.description);
-      data.append("price", formData.price);
-      data.append("stock", formData.stock);
-      data.append("category", formData.category);
-      data.append("extraDetails", formData.extraDetails);
-      
-      imageFiles.forEach((file, idx) => {
-        data.append(`images`, file);
-      });
+  try {
+    const data = new FormData();
 
-      const res = await API.post("/vendor/products", data, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-      alert("Product added successfully!");
-      navigate("/vendor/dashboard");
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to add product");
-    } finally {
-      setLoading(false);
-    }
-  };
+    data.append("name", formData.name);
+    data.append("description", formData.description);
+    data.append("price", formData.price);
+    data.append("stock", formData.stock);
+    data.append("category", formData.category);
+    data.append("extraDetails", formData.extraDetails);
+
+    // ✅ Send ALL selected images
+    imageFiles.forEach((file) => {
+      data.append("images", file); 
+    });
+
+    await API.post("/vendor/products", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    alert("Product added successfully!");
+    navigate("/vendor/dashboard");
+
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Failed to add product");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>

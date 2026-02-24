@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const path = require("path");
+const upload = require("../config/multer");
 
 const {
   createProduct,
@@ -14,28 +14,29 @@ const {
 
 const { protect, allowRoles, optionalAuth } = require("../middleware/authMiddleware");
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
 
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  }
-});
+router.post(
+  "/",
+  protect,
+  allowRoles("vendor", "admin"),
+  upload.array("images"),
+  createProduct
+);
+
+router.put(
+  "/:id",
+  protect,
+  allowRoles("vendor", "admin"),
+  upload.array("images"),
+  updateProduct
+);
+
+router.post(
+  "/products",
+  protect,
+  upload.array("images"),
+  createProduct
+);
 
 // ================= PUBLIC/OPTIONAL AUTH =================
 router.get("/", optionalAuth, getProducts);
