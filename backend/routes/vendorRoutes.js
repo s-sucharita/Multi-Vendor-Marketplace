@@ -3,6 +3,7 @@
   const upload = require("../middleware/upload");
 
   const { protect, vendorOnly } = require("../middleware/authMiddleware");
+  
   const {
     // Product Management
     getVendorProducts,
@@ -27,6 +28,7 @@
     getMessages,
     getMessageDetails,
     replyToMessage,
+    vendorReplyMessage,
 
     // Returns Management
     getReturnRequests,
@@ -80,6 +82,7 @@
   router.get("/messages", getMessages);
   router.get("/messages/:messageId", getMessageDetails);
   router.post("/messages/:messageId/reply", replyToMessage);
+  router.post("/messages/:id/reply", protect, vendorReplyMessage);
 
   // ==================== RETURNS MANAGEMENT ====================
   router.get("/returns", getReturnRequests);

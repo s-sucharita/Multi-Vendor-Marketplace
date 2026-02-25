@@ -13,8 +13,27 @@ export default function VendorDashboard() {
   const [notifications, setNotifications] = useState(null);
   const [salesSummary, setSalesSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState("");
+const [selectedMessageId, setSelectedMessageId] = useState(null);
 
   const user = JSON.parse(localStorage.getItem("user"));
+
+  const sendReply = async (messageId) => {
+  if (!replyText.trim()) return;
+
+  try {
+    await API.post(`/vendor/messages/${messageId}/reply`, {
+      message: replyText
+    });
+
+    setReplyText("");
+    setSelectedMessageId(null);
+    fetchDashboardData();
+
+  } catch (error) {
+    alert("Failed to send reply");
+  }
+};
 
   // Check if user is vendor
   if (user?.role !== "vendor") {
@@ -407,10 +426,52 @@ export default function VendorDashboard() {
                   <p>No messages.</p>
                 ) : (
                   messages.map((msg) => (
-                    <div key={msg._id} style={{ padding: "10px", marginBottom: "10px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: msg.isRead ? "#ffffff" : "#e3f2fd" }}>
-                      <p><strong>{msg.sender?.name}</strong>: {msg.subject}</p>
-                      <p style={{ fontSize: "12px", color: "#666" }}>{msg.messageType} - {new Date(msg.createdAt).toLocaleDateString()}</p>
-                    </div>
+                    <div key={msg._id} style={{  padding: "15px",
+      marginBottom: "15px",
+      border: "1px solid #ddd",
+      borderRadius: "4px",
+      backgroundColor: msg.isRead ? "#ffffff" : "#e3f2fd" }}>
+        <p><strong>From:</strong> {msg.sender?.name}</p>
+    <p><strong>Subject:</strong> {msg.subject}</p>
+    <p style={{ marginBottom: "8px" }}>{msg.message}</p>
+
+    {/* Replies */}
+    {msg.replies && msg.replies.length > 0 && (
+      <div style={{ marginTop: "10px", paddingLeft: "10px", borderLeft: "3px solid #2196F3" }}>
+        {msg.replies.map((reply, index) => (
+          <p key={index} style={{ fontSize: "14px" }}>
+            <strong>{reply.sender?.name}:</strong> {reply.message}
+          </p>
+        ))}
+      </div>
+    )}
+
+    {/* Reply Box */}
+    <textarea
+      placeholder="Write reply..."
+      value={selectedMessageId === msg._id ? replyText : ""}
+      onChange={(e) => {
+        setSelectedMessageId(msg._id);
+        setReplyText(e.target.value);
+      }}
+      style={{ width: "100%", marginTop: "10px", padding: "8px" }}
+    />
+
+    <button
+      onClick={() => sendReply(msg._id)}
+      style={{
+        marginTop: "8px",
+        padding: "6px 12px",
+        backgroundColor: "#2196F3",
+        color: "white",
+        border: "none",
+        borderRadius: "4px",
+        cursor: "pointer"
+      }}
+    >
+      Reply
+    </button>
+                      </div>
                   ))
                 )}
               </div>

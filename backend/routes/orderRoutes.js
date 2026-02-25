@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { protect, allowRoles } = require("../middleware/authMiddleware");
+const { addOrderMessage } = require("../controllers/orderController");
+const { addItemMessage } = require("../controllers/orderController");
 
 const {
   createOrder,
@@ -23,6 +25,9 @@ router.get("/:orderId", getOrderDetails);
 // vendor / admin
 router.get("/vendor/orders", allowRoles("vendor", "admin"), getVendorOrders);
 router.put("/:orderId/status", allowRoles("vendor", "admin"), updateOrderStatus);
+router.post("/:orderId/message", protect, addOrderMessage);
+router.post(
+  "/:orderId/items/:itemId/message", protect, addItemMessage);
 
 
 

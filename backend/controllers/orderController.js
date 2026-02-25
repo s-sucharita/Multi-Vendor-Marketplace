@@ -346,3 +346,94 @@ exports.cancelOrder = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+// ADD MESSAGE TO ORDER
+exports.addOrderMessage = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order)
+      return res.status(404).json({ message: "Order not found" });
+
+    const isVendor = order.items.some(
+      (item) => item.vendor?.toString() === req.user.id
+    );
+
+    const isCustomer =
+      order.customer?.toString() === req.user.id;
+
+    if (!isVendor && !isCustomer && req.user.role !== "admin")
+      return res.status(403).json({ message: "Access denied" });
+
+    order.messages.push({
+      sender: req.user.id,
+      text: req.body.text
+    });
+
+    await order.save();
+
+    // 🔔 Optional: notify the other person
+    const recipient = isVendor ? order.customer : order.items[0].vendor;
+
+    await Notification.create({
+      recipient,
+      type: "Order",
+      title: "New Message",
+      message: "You have a new message regarding your order.",
+      relatedId: order._id,
+      relatedModel: "Order"
+    });
+
+    res.json({ message: "Message sent", order });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ADD MESSAGE TO SPECIFIC ORDER ITEM
+exports.addItemMessage = async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+    const { text } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order)
+      return res.status(404).json({ message: "Order not found" });
+
+    const item = order.items.id(itemId);
+    if (!item)
+      return res.status(404).json({ message: "Item not found" });
+
+    const isVendor = item.vendor?.toString() === req.user.id;
+    const isCustomer = order.customer?.toString() === req.user.id;
+
+    if (!isVendor && !isCustomer && req.user.role !== "admin")
+      return res.status(403).json({ message: "Access denied" });
+
+    item.messages.push({
+      sender: req.user.id,
+      text
+    });
+
+    await order.save();
+
+    // 🔔 Notify the other person
+    const recipient = isVendor ? order.customer : item.vendor;
+
+    await Notification.create({
+      recipient,
+      type: "Order",
+      title: "New Message",
+      message: "You received a new message about your order item.",
+      relatedId: order._id,
+      relatedModel: "Order"
+    });
+
+    res.json({ message: "Message sent", order });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

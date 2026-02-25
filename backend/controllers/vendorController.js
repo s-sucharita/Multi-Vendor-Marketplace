@@ -7,6 +7,8 @@ const Dispute = require("../models/Dispute");
 const VendorMessage = require("../models/VendorMessage");
 const Notification = require("../models/Notification");
 
+
+
 // ==================== PRODUCT MANAGEMENT ====================
 
 // Get all products for vendor
@@ -959,6 +961,26 @@ exports.getNotificationsSummary = async (req, res) => {
       lowStockProducts,
       totalAlertsCount: pendingOrders + pendingReturns + openDisputes + unreadMessages + lowStockProducts
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+exports.vendorReplyMessage = async (req, res) => {
+  try {
+    const message = await VendorMessage.findById(req.params.id);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    message.reply = req.body.reply;
+    message.repliedAt = new Date();
+
+    await message.save();
+
+    res.json({ message: "Reply sent successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

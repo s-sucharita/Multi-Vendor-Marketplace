@@ -12,7 +12,7 @@ export default function VendorOrders() {
 
   const fetchOrders = async () => {
     try {
-      // ✅ correct backend route
+     
       const res = await API.get("/orders/vendor/orders");
       setOrders(res.data);
     } catch (err) {
@@ -25,7 +25,7 @@ export default function VendorOrders() {
 
   const updateStatus = async (orderId, status) => {
     try {
-      // ✅ correct backend route
+      
       await API.put(`/orders/${orderId}/status`, { status });
       await fetchOrders();
       alert("Order updated");
