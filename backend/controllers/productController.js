@@ -11,26 +11,53 @@ const createProduct = async (req, res) => {
       price,
       stock,
       category,
-      extraDetails
+      extraDetails,
+      discount,
+      discountType
     } = req.body;
 
     // Get uploaded image paths
    const images = req.files?.map(file => `/uploads/products/${file.filename}`);
 
+    // Calculate discount
+    const discountValue = discount !== undefined ? Math.min(100, Math.max(0, discount)) : 0;
+    const discType = discountType || "percentage";
+    let discountedPrice = price;
+
+    if (discountValue > 0) {
+      if (discType === "fixed") {
+        discountedPrice = Math.max(0, price - discountValue);
+      } else {
+        discountedPrice = price * (1 - discountValue / 100);
+      }
+    }
+
     const product = new Product({
       name,
       description,
       price,
-      stock,
+      stock: Math.max(0, stock || 0),
       category,
       extraDetails,
       images,
+      discount: discountValue,
+      discountType: discType,
+      discountedPrice,
       vendor: req.user._id   
     });
 
     const savedProduct = await product.save();
 
-    res.status(201).json(savedProduct);
+    res.status(201).json({
+      message: "Product created successfully",
+      product: savedProduct,
+      pricing: {
+        originalPrice: savedProduct.price,
+        discount: savedProduct.discount,
+        discountType: savedProduct.discountType,
+        finalPrice: savedProduct.discountedPrice || savedProduct.price
+      }
+    });
 
   } catch (error) {
     console.error("Create Product Error:", error);
@@ -184,6 +211,29 @@ const updateProduct = async (req, res) => {
       } catch (e) {
         // ignore parse error
       }
+    }
+
+    // Handle discount calculation
+    if (body.price || body.discount !== undefined || body.discountType) {
+      const price = body.price || product.price;
+      const discount = body.discount !== undefined ? body.discount : product.discount;
+      const discountType = body.discountType || product.discountType || "percentage";
+
+      body.price = price;
+      body.discount = Math.min(100, Math.max(0, discount)); // Clamp between 0-100
+      body.discountType = discountType;
+
+      // Calculate discounted price
+      if (discountType === "fixed") {
+        body.discountedPrice = Math.max(0, price - discount);
+      } else {
+        body.discountedPrice = price * (1 - discount / 100);
+      }
+    }
+
+    // Ensure stock is not negative
+    if (body.stock !== undefined) {
+      body.stock = Math.max(0, body.stock);
     }
 
     const updated = await Product.findByIdAndUpdate(

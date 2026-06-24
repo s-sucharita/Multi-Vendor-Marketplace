@@ -45,7 +45,14 @@
     // Reports & Analytics
     getSalesSummary,
     getSalesReport,
-    getNotificationsSummary
+    getNotificationsSummary,
+
+    // Vendor Request Management
+    submitVendorRequest,
+    getMyVendorRequests,
+    getVendorRequestDetails,
+    updateVendorRequest,
+    deleteVendorRequest
   } = require("../controllers/vendorController");
 
     const { createProduct: createVendorProduct  } = require("../controllers/productController");
@@ -104,5 +111,12 @@
   // ==================== LEAVE MANAGEMENT ====================
   router.post("/leaves", require('../controllers/vendorController').requestLeave);
   router.get("/leaves", require('../controllers/vendorController').getMyLeaves);
+
+  // ==================== VENDOR REQUEST MANAGEMENT ====================
+  router.post("/requests", submitVendorRequest);
+  router.get("/requests", getMyVendorRequests);
+  router.get("/requests/:requestId", getVendorRequestDetails);
+  router.put("/requests/:requestId", updateVendorRequest);
+  router.delete("/requests/:requestId", deleteVendorRequest);
 
   module.exports = router;

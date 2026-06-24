@@ -22,7 +22,7 @@ export default function MessageDetails() {
       alert("Reply sent");
       setReply("");
       // refresh
-      const res = await API.get(`/users/messages/${id}`);
+      const res = await API.get(`/user/messages/${id}`);
       setMsg(res.data);
     } catch (err) {
       console.error(err);

@@ -6,6 +6,7 @@ const VendorCompliance = require("../models/VendorCompliance");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Notification = require("../models/Notification");
+const VendorRequest = require("../models/VendorRequest");
 
 // ==================== VENDOR MANAGEMENT ====================
 
@@ -643,6 +644,170 @@ exports.getPendingApprovals = async (req, res) => {
       pendingVendorRegistrations,
       disputes: disputeNotifications,
       totalPending: pendingCompliance + pendingTasks + pendingVendorRegistrations + disputeNotifications
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ==================== VENDOR REQUEST MANAGEMENT ====================
+
+// Admin: Get all vendor requests
+exports.getAllVendorRequests = async (req, res) => {
+  try {
+    const { status, type, vendorId } = req.query;
+    let filter = {};
+
+    if (status) filter.status = status;
+    if (type) filter.type = type;
+    if (vendorId) filter.vendor = vendorId;
+
+    const requests = await VendorRequest.find(filter)
+      .populate("vendor", "name businessName email")
+      .populate("approvedBy", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin: Get vendor request details
+exports.getVendorRequestDetails = async (req, res) => {
+  try {
+    const request = await VendorRequest.findById(req.params.requestId)
+      .populate("vendor", "name businessName email phone")
+      .populate("approvedBy", "name email");
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin: Approve a vendor request
+exports.approveVendorRequest = async (req, res) => {
+  try {
+    const { adminResponse } = req.body;
+    const request = await VendorRequest.findByIdAndUpdate(
+      req.params.requestId,
+      {
+        status: "approved",
+        adminResponse,
+        approvedBy: req.user.id,
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      },
+      { new: true }
+    ).populate("vendor", "name email");
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Send notification to vendor
+    await Notification.create({
+      userId: request.vendor._id,
+      title: "Request Approved",
+      message: `Your ${request.type} request "${request.title}" has been approved.`,
+      type: "vendor-request-approved",
+      relatedId: request._id
+    });
+
+    res.json({ message: "Request approved successfully", request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin: Reject a vendor request
+exports.rejectVendorRequest = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+
+    if (!rejectionReason) {
+      return res.status(400).json({ message: "Rejection reason is required" });
+    }
+
+    const request = await VendorRequest.findByIdAndUpdate(
+      req.params.requestId,
+      {
+        status: "rejected",
+        rejectionReason,
+        approvedBy: req.user.id,
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      },
+      { new: true }
+    ).populate("vendor", "name email");
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Send notification to vendor
+    await Notification.create({
+      userId: request.vendor._id,
+      title: "Request Rejected",
+      message: `Your ${request.type} request "${request.title}" has been rejected. Reason: ${rejectionReason}`,
+      type: "vendor-request-rejected",
+      relatedId: request._id
+    });
+
+    res.json({ message: "Request rejected successfully", request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin: Remove/Delete a vendor request
+exports.removeVendorRequest = async (req, res) => {
+  try {
+    const request = await VendorRequest.findById(req.params.requestId);
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Log the action
+    await ActivityLog.create({
+      admin: req.user.id,
+      action: "DELETE_VENDOR_REQUEST",
+      details: `Deleted vendor request: ${request.title} from vendor ${request.vendor}`
+    });
+
+    await VendorRequest.findByIdAndDelete(req.params.requestId);
+
+    res.json({ message: "Request deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin: Get pending vendor requests summary
+exports.getPendingVendorRequests = async (req, res) => {
+  try {
+    const totalRequests = await VendorRequest.countDocuments();
+    const pendingRequests = await VendorRequest.countDocuments({ status: "pending" });
+    const approvedRequests = await VendorRequest.countDocuments({ status: "approved" });
+    const rejectedRequests = await VendorRequest.countDocuments({ status: "rejected" });
+
+    const recentRequests = await VendorRequest.find()
+      .populate("vendor", "name businessName")
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.json({
+      totalRequests,
+      pendingRequests,
+      approvedRequests,
+      rejectedRequests,
+      recentRequests
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

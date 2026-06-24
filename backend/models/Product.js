@@ -4,6 +4,24 @@ const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
   price: { type: Number, required: true },
+  // Discount information
+  discount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+    description: "Discount percentage (0-100)"
+  },
+  discountType: {
+    type: String,
+    enum: ["percentage", "fixed"],
+    default: "percentage"
+  },
+  discountedPrice: {
+    type: Number,
+    default: null,
+    description: "Calculated price after discount"
+  },
   // primary/thumbnail image for quick display
   image: String,
   // allow multiple photo URLs

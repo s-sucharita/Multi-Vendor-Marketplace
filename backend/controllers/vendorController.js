@@ -6,6 +6,7 @@ const ReturnRequest = require("../models/ReturnRequest");
 const Dispute = require("../models/Dispute");
 const VendorMessage = require("../models/VendorMessage");
 const Notification = require("../models/Notification");
+const VendorRequest = require("../models/VendorRequest");
 
 
 
@@ -85,7 +86,7 @@ console.log("FILES:", req.files);
   // }
 };
 
-// Update product
+// Update product (price, stock, discount, etc.)
 exports.updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId);
@@ -98,11 +99,69 @@ exports.updateProduct = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this product" });
     }
 
-    const { name, description, price, image, category } = req.body;
-    Object.assign(product, { name, description, price, image, category });
+    const { 
+      name, 
+      description, 
+      price, 
+      image, 
+      category, 
+      stock, 
+      discount, 
+      discountType 
+    } = req.body;
+
+    // Update basic fields
+    if (name) product.name = name;
+    if (description) product.description = description;
+    if (image) product.image = image;
+    if (category) product.category = category;
+
+    // Update amount (price)
+    if (price !== undefined) {
+      product.price = price;
+    }
+
+    // Update numbers (stock/quantity)
+    if (stock !== undefined) {
+      product.stock = Math.max(0, stock); // Ensure stock is not negative
+    }
+
+    // Update discount
+    if (discount !== undefined) {
+      product.discount = Math.min(100, Math.max(0, discount)); // Clamp between 0-100
+      
+      // Calculate discounted price
+      if (discountType === "fixed") {
+        product.discountType = "fixed";
+        product.discountedPrice = Math.max(0, product.price - discount);
+      } else {
+        product.discountType = "percentage";
+        product.discountedPrice = product.price * (1 - product.discount / 100);
+      }
+    } else if (discountType && !discount) {
+      // Update discount type only if provided
+      product.discountType = discountType;
+      
+      // Recalculate discounted price with existing discount
+      if (discountType === "fixed") {
+        product.discountedPrice = Math.max(0, product.price - product.discount);
+      } else {
+        product.discountedPrice = product.price * (1 - product.discount / 100);
+      }
+    }
+
     await product.save();
 
-    res.json({ message: "Product updated successfully", product });
+    res.json({ 
+      message: "Product updated successfully", 
+      product,
+      pricing: {
+        originalPrice: product.price,
+        discount: product.discount,
+        discountType: product.discountType,
+        finalPrice: product.discountedPrice || product.price
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -981,6 +1040,143 @@ exports.vendorReplyMessage = async (req, res) => {
     await message.save();
 
     res.json({ message: "Reply sent successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ==================== VENDOR REQUEST MANAGEMENT ====================
+
+// Vendor: Submit a new request
+exports.submitVendorRequest = async (req, res) => {
+  try {
+    const { type, title, description, priority, attachments } = req.body;
+
+    const vendorRequest = await VendorRequest.create({
+      vendor: req.user.id,
+      type,
+      title,
+      description,
+      priority: priority || "medium",
+      attachments: attachments || []
+    });
+
+    // Send notification to admin
+    await Notification.create({
+      userId: "admin",
+      title: `New Vendor Request: ${title}`,
+      message: `${req.user.name} has submitted a new ${type} request`,
+      type: "vendor-request",
+      relatedId: vendorRequest._id
+    });
+
+    res.status(201).json({ message: "Request submitted successfully", vendorRequest });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Vendor: Get their own requests
+exports.getMyVendorRequests = async (req, res) => {
+  try {
+    const { status } = req.query;
+    let filter = { vendor: req.user.id };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const requests = await VendorRequest.find(filter)
+      .populate("vendor", "name businessName email")
+      .populate("approvedBy", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Vendor: Get details of a specific request
+exports.getVendorRequestDetails = async (req, res) => {
+  try {
+    const request = await VendorRequest.findById(req.params.requestId)
+      .populate("vendor", "name businessName email")
+      .populate("approvedBy", "name email");
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Check if vendor owns this request
+    if (request.vendor._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized to view this request" });
+    }
+
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Vendor: Update their own request (only if pending)
+exports.updateVendorRequest = async (req, res) => {
+  try {
+    const request = await VendorRequest.findById(req.params.requestId);
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Check if vendor owns this request
+    if (request.vendor.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized to update this request" });
+    }
+
+    // Can only update if status is pending
+    if (request.status !== "pending") {
+      return res.status(400).json({ message: "Cannot update request that has been processed" });
+    }
+
+    const { title, description, type, priority, attachments } = req.body;
+
+    if (title) request.title = title;
+    if (description) request.description = description;
+    if (type) request.type = type;
+    if (priority) request.priority = priority;
+    if (attachments) request.attachments = attachments;
+    request.updatedAt = new Date();
+
+    await request.save();
+
+    res.json({ message: "Request updated successfully", request });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Vendor: Delete/Cancel their own request (only if pending)
+exports.deleteVendorRequest = async (req, res) => {
+  try {
+    const request = await VendorRequest.findById(req.params.requestId);
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Check if vendor owns this request
+    if (request.vendor.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized to delete this request" });
+    }
+
+    // Can only delete if status is pending or cancelled
+    if (request.status !== "pending" && request.status !== "cancelled") {
+      return res.status(400).json({ message: "Cannot delete request that has been processed" });
+    }
+
+    await VendorRequest.findByIdAndDelete(req.params.requestId);
+
+    res.json({ message: "Request deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

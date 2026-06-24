@@ -37,7 +37,15 @@ const {
   
   // Notifications
   sendNotification,
-  getPendingApprovals
+  getPendingApprovals,
+
+  // Vendor Request Management
+  getAllVendorRequests,
+  getVendorRequestDetails,
+  approveVendorRequest,
+  rejectVendorRequest,
+  removeVendorRequest,
+  getPendingVendorRequests
 } = require("../controllers/adminController");
 
 // All admin routes require authentication and admin role
@@ -84,5 +92,13 @@ router.put('/leaves/:id', require('../controllers/adminController').reviewLeave)
 // ==================== NOTIFICATIONS & APPROVALS ====================
 router.post("/notifications/send", sendNotification);
 router.get("/pending-approvals", getPendingApprovals);
+
+// ==================== VENDOR REQUEST MANAGEMENT ====================
+router.get("/requests", getAllVendorRequests);
+router.get("/requests/pending-summary", getPendingVendorRequests);
+router.get("/requests/:requestId", getVendorRequestDetails);
+router.post("/requests/:requestId/approve", approveVendorRequest);
+router.post("/requests/:requestId/reject", rejectVendorRequest);
+router.delete("/requests/:requestId", removeVendorRequest);
 
 module.exports = router;
